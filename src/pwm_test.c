@@ -37,7 +37,10 @@ const uint pwm_pin = 22;
 // 4 kHz values
 // const float pwm_div = 50.f;
 // 3 kHz values
-const float pwm_div = 66.f;
+// pico_w
+// const float pwm_div = 66.f;
+// pico2_w
+const float pwm_div = 80.f;
 // 2.5 kHz values
 // const float pwm_div = 80.f;
 // 2 kHz values

@@ -4,20 +4,16 @@
 #define PID_MAX 624
 #define PID_MIN 0
 
-const uint16_t set_point = (PID_MAX * 2 / 5);
-// const uint16_t set_point = (500);
+volatile uint16_t set_point = ((uint32_t)PID_MAX * 1 / 2);
+// const uint16_t set_point = (500)
 
-// const float Kp = 0.7f;
-// const float Ki = 3.3f;
-// const float Kd = 1.2f;
+const float Kp = 1.f;
+const float Ki = 3.f;
+const float Kd = 0.f;
 
-// const float Kp = 1.f;
-// const float Ki = 3.f;
-// const float Kd = .1  f;
-
-float Kp = 0.04;
-float Ki = 0.3;
-float Kd = 0;
+// float Kp = 0.04;
+// float Ki = 0.3;
+// float Kd = 0;
 
 
 float K1 = 0;
@@ -33,6 +29,17 @@ static void pid_init_k(float T)
     K1 = (2.0f * T * Kp + Ki * T * T + 2.0f * Kd) / (2.0f * T);
     K2 = (Ki * T * T - 2.0f * Kp * T - 4.0f * Kd) / (2.0f * T);
     K3 = Kd / T;
+}
+
+// setpoint [0-100]
+static void pid_update_setpoint(uint16_t sp_100)
+{
+    set_point = (uint32_t)PID_MAX * sp_100 / 100;
+}
+
+static uint16_t pid_get_setpoint()
+{
+    return (uint32_t)set_point * 100 / PID_MAX;
 }
 
 // xxxxx procesa los valores de 12 bits directamente del ADC

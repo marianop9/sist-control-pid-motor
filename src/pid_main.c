@@ -8,7 +8,7 @@
 
 #include "pid.h"
 
-#define ADC_CHAN 1
+#define ADC_CHAN 2
 #define ADC_PIN (26 + ADC_CHAN)
 
 // guarda las muestras para PID
@@ -21,18 +21,35 @@ volatile bool print_flag = false;
 char print_buf[256] = {0};
 repeating_timer_t print_timer;
 
+// setpoint timer
+repeating_timer_t sp_timer;
+
 const uint pwm_pin = 22;
 // 125 MHz system clk
 // freq PWM = sys_clk / period
 // PWM period = (TOP+1) * DIV
 // 3 kHz values
-const float pwm_div = 66.f;
+const float pwm_div = 80.f;
 const uint16_t pwm_wrap = 624;
 
 // funcion periodica - habilita la impresion
 bool cb_enable_print(repeating_timer_t *rt)
 {
     print_flag = true;
+
+    return true;
+}
+
+bool cb_change_sp(repeating_timer_t *rt)
+{
+    uint16_t setpoints[] = {30, 80};
+    static size_t i = 0;
+
+    pid_update_setpoint(setpoints[i]);
+
+    i += 1;
+    if (i > 1)
+        i = 0;
 
     return true;
 }
@@ -61,6 +78,8 @@ int main()
 
     // printf timer
     add_repeating_timer_ms(1200, cb_enable_print, NULL, &print_timer);
+    // setpoint timer
+    add_repeating_timer_ms(500, cb_change_sp, NULL, &sp_timer);
 
     // configure PWM
     gpio_set_function(pwm_pin, GPIO_FUNC_PWM);
@@ -110,7 +129,7 @@ int main()
     pwm_set_enabled(pwm_slice, true);
 
     float pid_out = 0.f;
-    uint16_t pwm_level = 0;
+    uint16_t pwm_level = pwm_wrap;
     pwm_set_gpio_level(pwm_pin, pwm_level);
 
     while (1)
@@ -121,12 +140,15 @@ int main()
             {
                 print_flag = false;
                 printf("ADC %u - %u - %u\n", data_buf[0], data_buf[1], data_buf[2]);
-                printf("PWM level %u - duty %u\n", pwm_level, (pwm_level * 100) / pwm_wrap);
+                printf("PWM level %u - duty %u - SP %u\n",
+                       pwm_level,
+                       (pwm_level * 100) / pwm_wrap,
+                       pid_get_setpoint());
             }
             continue;
         }
         data_flag = false;
-        
+
         // procesar datos
         pid_out = pid_process(pid_out, data_buf[0]);
 
@@ -142,7 +164,7 @@ int main()
 
         // invertir PWM (por inversion de hardware)
         pwm_level = pwm_wrap - pwm_level;
-            
+
         // actualizar pwm
         pwm_set_gpio_level(pwm_pin, pwm_level);
 
